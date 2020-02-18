@@ -199,4 +199,43 @@ try {
 }
 ```
 
-##### 三、写文件
+##### 三、写文件（同步）
+
+写文件是通过fs.writeFile()实现的
+
+```js
+'use strict';
+
+var fs = require("fs");
+
+var data = 'hello,nodeJs';
+
+fs.writeFile('ouput.txt',data,function(err) {
+    if(err) {
+        console.log(err)
+    } else {
+        console.log('ok')
+    }
+});
+```
+
+`writeFile()`的参数依次为文件名、数据和回调函数。如果传入的数据是String，默认按UTF-8编码写入文本文件，如果传入的参数是`Buffer`，则写入的是二进制文件。回调函数由于只关心成功与否，因此只需要一个`err`参数。
+
+##### 四、写文件（异步）
+
+writeFileSync()
+
+```js
+'use strict';
+
+var fs = require('fs');
+
+var data = 'hello,lorry';
+
+fs.writeFileSync('output.txt',data)
+```
+
+##### 五、stat
+
+如果我们要获取文件大小，创建时间等信息，可以使用`fs.stat()`，它返回一个`Stat`对象，能告诉我们文件或目录的详细信息：
+
