@@ -239,3 +239,67 @@ fs.writeFileSync('output.txt',data)
 
 如果我们要获取文件大小，创建时间等信息，可以使用`fs.stat()`，它返回一个`Stat`对象，能告诉我们文件或目录的详细信息：
 
+```js
+'use strict';
+
+var fs = require('fs');
+
+fs.stat('sample.txt', function(err, stat) {
+    if(err) {
+        console.log(err);
+    } else {
+        // 是否文件
+        console.log('isFile:' + stat.isFile());
+        // 是否目录
+        console.log('isDirectory:' + stat.isDirectory());
+        if(stat.isFile()) {
+            // 文件大小
+            console.log('size:' + stat.size);
+            // 创建时间，Date对象
+            console.log('creat time:' + stat.birthtime);
+            // 修改时间，Date对象
+            console.log('modified time:' + stat.mtime);
+        }
+    }
+})
+```
+
+注意：stat()`也有一个对应的同步函数`statSync()。
+
+##### 六、使用同步，还是异步
+
+由于Node环境执行的JavaScript代码是服务器端代码，所以，绝大部分需要在服务器运行期反复执行业务逻辑的代码，*必须使用异步代码*，否则，同步代码在执行时期，服务器将停止响应，因为JavaScript只有一个执行线程。服务器启动时如果需要读取配置文件，或者结束时需要写入到状态文件时，可以使用同步代码，因为这些代码只在启动和结束时执行一次，不影响服务器正常运行时的异步执行。
+
+
+
+#### 4）stream
+
+`stream`是Node.js提供的又一个仅在服务区端可用的模块，目的是支持“流”这种数据结构。
+
+在Node.js中，流也是一个对象，我们只需要响应流的事件就可以了：`data`事件表示流的数据已经可以读取了，`end`事件表示这个流已经到末尾了，没有数据可以读取了，`error`事件表示出错了。
+
+```js
+'use strict';
+
+var fs = require('fs');
+
+//打开一个流
+var rs = fs.createReadStream('sample.txt','utf-8');
+
+rs.on('data',function(chunk) {
+    console.log('data');
+    console.log(chunk);
+})
+
+rs.on('end',function() {
+    console.log('end');
+})
+
+rs.on('error',function(err) {
+    console.log('error' + err)
+})
+```
+
+要注意，`data`事件可能会有多次，每次传递的`chunk`是流的一部分数据。
+
+要以流的形式写入文件，只需要不断调用`write()`方法，最后以`end()`结束：
