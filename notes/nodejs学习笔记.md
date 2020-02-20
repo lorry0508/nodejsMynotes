@@ -303,3 +303,69 @@ rs.on('error',function(err) {
 要注意，`data`事件可能会有多次，每次传递的`chunk`是流的一部分数据。
 
 要以流的形式写入文件，只需要不断调用`write()`方法，最后以`end()`结束：
+
+```js
+'use strict';
+
+var fs = require("fs");
+
+var ws1 = fs.createReadStream('output1.txt','utf-8');
+
+ws1.write('使用stream写入文本数据。。。\n');
+
+ws1.write('end');
+
+ws1.end();
+
+var ws2 = fs.createWirteStream('output2.txt');
+
+ws2.write(new Buffer('使用stream写入二进制数据。。。、\n','utf-8'));
+
+ws2.write(new Buffer('end','utf-8'));
+
+ws2.end();
+```
+
+所有可以读取数据的流都继承自`stream.Readable`，所有可以写入的流都继承自`stream.Writable`。
+
+#### 5)pipe
+
+就像可以把两个水管串成一个更长的水管一样，两个流也可以串起来。一个`Readable`流和一个`Writable`流串起来后，所有的数据自动从`Readable`流进入`Writable`流，这种操作叫`pipe`。
+
+在Node.js中，`Readable`流有一个`pipe()`方法，就是用来干这件事的。
+
+让我们用`pipe()`把一个文件流和另一个文件流串起来，这样源文件的所有数据就自动写入到目标文件里了，所以，这实际上是一个复制文件的程序：
+
+```js
+'use strict';
+
+var fs = require('fs');
+
+var rs = fs.createReadStream('sample.txt');
+var ws = fs.createWriteStream('copied.txt');
+
+rs.pipe(ws);
+```
+
+默认情况下，当`Readable`流的数据读取完毕，`end`事件触发后，将自动关闭`Writable`流。如果我们不希望自动关闭`Writable`流，需要传入参数：
+
+```js
+readable.pipe(writable, { end: false });
+```
+
+#### 6)http
+
+##### HTTP协议
+
+(http://www.liaoxuefeng.com/wiki/1016959663602400/1017804782304672)
+
+##### HTTP服务器
+
+`http`模块提供的`request`和`response`对象。
+
+`request`对象封装了HTTP请求，我们调用`request`对象的属性和方法就可以拿到所有HTTP请求的信息；
+
+`response`对象封装了HTTP响应，我们操作`response`对象的方法，就可以把HTTP响应返回给浏览器。
+
+
+
