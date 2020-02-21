@@ -367,5 +367,126 @@ readable.pipe(writable, { end: false });
 
 `response`对象封装了HTTP响应，我们操作`response`对象的方法，就可以把HTTP响应返回给浏览器。
 
+##### 文件服务器
 
+解析URL需要用到Node.js提供的`url`模块，它使用起来非常简单，通过`parse()`将一个字符串解析为一个`Url`对象：
+
+```js
+'use strict';
+
+var url = require("url");
+
+console.log(url.parse('http://user:pass@host.com:8080/path/to/file?query=string#hash'));
+```
+
+处理本地文件目录需要使用Node.js提供的`path`模块，它可以方便地构造目录：
+
+```js
+'use strict';
+
+var path = require('path');
+
+// 解析当前目录:
+var workDir = path.resolve('.'); // '/Users/michael'
+
+// 组合完整的文件路径:当前目录+'pub'+'index.html':
+var filePath = path.join(workDir, 'pub', 'index.html');
+// '/Users/michael/pub/index.html'
+```
+
+使用`path`模块可以正确处理操作系统相关的文件路径。在Windows系统下，返回的路径类似于`C:\Users\michael\static\index.html`，这样，我们就不关心怎么拼接路径了。
+
+最后，我们实现一个文件服务器`file_server.js`：
+
+```js
+'use strict';
+
+var
+    fs = require('fs'),
+    url = require('url'),
+    path = require('path'),
+    http = require('http');
+
+// 从命令行参数获取root目录，默认是当前目录:
+var root = path.resolve(process.argv[2] || '.');
+
+console.log('Static root dir: ' + root);
+
+// 创建服务器:
+var server = http.createServer(function (request, response) {
+    // 获得URL的path，类似 '/css/bootstrap.css':
+    var pathname = url.parse(request.url).pathname;
+    // 获得对应的本地文件路径，类似 '/srv/www/css/bootstrap.css':
+    var filepath = path.join(root, pathname);
+    // 获取文件状态:
+    fs.stat(filepath, function (err, stats) {
+        if (!err && stats.isFile()) {
+            // 没有出错并且文件存在:
+            console.log('200 ' + request.url);
+            // 发送200响应:
+            response.writeHead(200);
+            // 将文件流导向response:
+            fs.createReadStream(filepath).pipe(response);
+        } else {
+            // 出错了或者文件不存在:
+            console.log('404 ' + request.url);
+            // 发送404响应:
+            response.writeHead(404);
+            response.end('404 Not Found');
+        }
+    });
+});
+
+server.listen(8080);
+
+console.log('Server is running at http://127.0.0.1:8080/');
+```
+
+没有必要手动读取文件内容。由于`response`对象本身是一个`Writable Stream`，直接用`pipe()`方法就实现了自动读取文件内容并输出到HTTP响应。
+
+在命令行运行`node file_server.js /path/to/dir`，把`/path/to/dir`改成你本地的一个有效的目录，然后在浏览器中输入`http://localhost:8080/index.html`，只要当前目录下存在文件`index.html`，服务器就可以把文件内容发送给浏览器。
+
+#### 7)crypto
+
+crypto模块的目的是为了提供通用的加密和哈希算法。用纯JavaScript代码实现这些功能不是不可能，但速度会非常慢。Nodejs用C/C++实现这些算法后，通过cypto这个模块暴露为JavaScript接口，这样用起来方便，运行速度也快。
+
+##### MD5和SHA1
+
+MD5是一种常用的哈希算法，用于给任意数据一个“签名”。这个签名通常用一个十六进制的字符串表示：
+
+```js
+const crypto = require('crypto');
+
+const hash = crypto.createHash('md5');
+
+// 可任意多次调用update()
+hash.update('hello,world');
+hash.update('hello,nodejs');
+
+console.log(hash.digest('hex')); // cd3e64e7e87896b245d7a30ccfc1a048
+```
+
+`update()`方法默认字符串编码为`UTF-8`，也可以传入Buffer。如果要计算SHA1，只需要把`'md5'`改成`'sha1'`，就可以得到SHA1的结果`1f32b9c9932c02227819a4151feed43e131aca40`。还可以使用更安全的`sha256`和`sha512`。
+
+##### Hmac
+
+Hmac算法也是一种哈希算法，它可以利用MD5或SHA1等哈希算法。不同的是，Hmac还需要一个密钥：
+
+```js
+const crypto = require('crypto');
+
+const hmac = crypto.createHmac('sha256','sercet-key');
+
+hmac.update('hello,nodejs');
+
+hmac.update('hello,lorry');
+
+console.log(hmac.digest('hex')); //a86098d1c3983cd3220c39b59af8ab55f3cc674e2ea1c366bd65ef5151258c91
+```
+
+只要密钥发生了变化，那么同样的输入数据也会得到不同的签名，因此，可以把Hmac理解为用随机数“增强”的哈希算法。
+
+#### 8)AES
+
+AES是一种常用的对称加密算法，加解密都用同一个密钥。crypto模块提供了AES支持，但是需要自己封装好函数，便于使用：
 
