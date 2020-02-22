@@ -11,5 +11,14 @@ function aesDecrypt(encrypted, key) {
     const decipher = crypto.createDecipher('aes192',key);
     var decrypted = decipher.update(ecncrypted,'hex','utf8');
     decrypted += decipher.final('utf8');
-
+    return decrypted;
 }
+
+var data = 'Hello,this is a secret message!';
+var key = 'Password';
+var encrypted = aesEncrypt(data,key);
+var decrypted = aesEncrypt(encrypted,key);
+
+console.log('Plain text:' + data);
+console.log('Encrypted text:' + encrypted);
+console.log('Decrypted text:' + decrypted);

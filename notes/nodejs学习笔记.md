@@ -486,7 +486,79 @@ console.log(hmac.digest('hex')); //a86098d1c3983cd3220c39b59af8ab55f3cc674e2ea1c
 
 只要密钥发生了变化，那么同样的输入数据也会得到不同的签名，因此，可以把Hmac理解为用随机数“增强”的哈希算法。
 
-#### 8)AES
+##### AES
 
 AES是一种常用的对称加密算法，加解密都用同一个密钥。crypto模块提供了AES支持，但是需要自己封装好函数，便于使用：
 
+```js
+const crypto = require('crypto');
+
+function aesEncrypt(data, key) {
+    const cipher = crypto.createCipher('aes192', key);
+    var crypted = cipher.update(data, 'utf8', 'hex');
+    crypted += cipher.final('hex');
+    return crypted;
+}
+
+function aesDecrypt(encrypted, key) {
+    const decipher = crypto.createDecipher('aes192', key);
+    var decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+}
+
+var data = 'Hello, this is a secret message!';
+var key = 'Password!';
+var encrypted = aesEncrypt(data, key);
+var decrypted = aesDecrypt(encrypted, key);
+
+console.log('Plain text: ' + data);
+console.log('Encrypted text: ' + encrypted);
+console.log('Decrypted text: ' + decrypted);
+```
+
+运行结果如下：
+
+```js
+Plain text: Hello, this is a secret message!
+Encrypted text: 8a944d97bdabc157a5b7a40cb180e7...
+Decrypted text: Hello, this is a secret message!
+```
+
+注意到：AES有很多不同的算法，如`aes192`，`aes-128-ecb`，`aes-256-cbc`等，AES除了密钥外还可以指定IV（Initial Vector），不同的系统只要IV不同，用相同的密钥加密相同的数据得到的加密结果也是不同的。加密结果通常有两种表示方法：hex和base64，这些功能Nodejs全部都支持，但是在应用中要注意，如果加解密双方一方用Nodejs，另一方用Java、PHP等其它语言，需要仔细测试。如果无法正确解密，要确认双方是否遵循同样的AES算法，字符串密钥和IV是否相同，加密后的数据是否统一为hex或base64格式。
+
+##### Diffie-Hellman
+
+DH算法是一种密钥交换协议，它可以让双方在不泄漏密钥的情况下协商出一个密钥来。
+
+用crypto模块实现DH算法如下：
+
+```js
+const crypto = require('crypto');
+
+// xiaoming's keys:
+var ming = crypto.createDiffieHellman(512);
+var ming_keys = ming.generateKeys();
+
+var prime = ming.getPrime();
+var generator = ming.getGenerator();
+
+console.log('Prime: ' + prime.toString('hex'));
+console.log('Generator: ' + generator.toString('hex'));
+
+// xiaohong's keys:
+var hong = crypto.createDiffieHellman(prime, generator);
+var hong_keys = hong.generateKeys();
+
+// exchange and generate secret:
+var ming_secret = ming.computeSecret(hong_keys);
+var hong_secret = hong.computeSecret(ming_keys);
+
+// print secret:
+console.log('Secret of Xiao Ming: ' + ming_secret.toString('hex'));
+console.log('Secret of Xiao Hong: ' + hong_secret.toString('hex'));
+```
+
+##### RSA
+
+RSA算法是一种非对称加密算法，即由一个私钥和一个公钥构成的密钥对，通过私钥加密，公钥解密，或者通过公钥加密，私钥解密。其中，公钥可以公开，私钥必须保密。
