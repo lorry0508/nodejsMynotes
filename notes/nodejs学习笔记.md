@@ -562,3 +562,539 @@ console.log('Secret of Xiao Hong: ' + hong_secret.toString('hex'));
 ##### RSA
 
 RSA算法是一种非对称加密算法，即由一个私钥和一个公钥构成的密钥对，通过私钥加密，公钥解密，或者通过公钥加密，私钥解密。其中，公钥可以公开，私钥必须保密。
+
+### 6.Web开发
+
+两种模式：
+
+​	1.C/S模式：客户端/服务器
+
+​	2.B/S模式：浏览器/服务器
+
+web开发经历的几个阶段：
+
+​	1.静态web页面：由文本编辑器直接编辑并生成静态的HTML页面，如果要修改Web页面的内容，就需要再次编辑HTML		源文件，早期的互联网Web页面就是静态的；
+
+​	2.CGI：由于静态Web页面无法与用户交互，比如用户填写了一个注册表单，静态Web页面就无法处理。要处理用户发		送的动态数据，出现了Common Gateway Interface，简称CGI，用C/C++编写。
+
+​	3.ASP/JSP/PHP：由于Web应用特点是修改频繁，用C/C++这样的低级语言非常不适合Web开发，而脚本语言由于开发		效率高，与HTML结合紧密，因此，迅速取代了CGI模式。ASP是微软推出的用VBScript脚本编程的Web开发技术，		而JSP用Java来编写脚本，PHP本身则是开源的脚本语言。
+
+​	4.MVC：为了解决直接用脚本语言嵌入HTML导致的可维护性差的问题，Web应用也引入了Model-View-Controller的模		式，来简化Web开发。ASP发展为ASP.Net，JSP和PHP也有一大堆MVC框架。
+
+用Node.js开发Web服务器端，有几个显著的优势：
+
+​	一是后端语言也是JavaScript，以前掌握了前端JavaScript的开发人员，现在可以同时编写后端代码；
+
+​	二是前后端统一使用JavaScript，就没有切换语言的障碍了；
+
+​	三是速度快，非常快！这得益于Node.js天生是异步的。
+
+常见的Web框架包括：[Express](http://expressjs.com/)，[Sails.js](http://sailsjs.org/)，[koa](http://koajs.com/)，[Meteor](https://www.meteor.com/)，[DerbyJS](http://derbyjs.com/)，[Total.js](https://www.totaljs.com/)，[restify](http://restify.com/)……
+
+ORM框架比Web框架要少一些：[Sequelize](http://www.sequelizejs.com/)，[ORM2](http://dresende.github.io/node-orm2/)，[Bookshelf.js](http://bookshelfjs.org/)，[Objection.js](http://vincit.github.io/objection.js/)……
+
+模版引擎PK：[Jade](http://jade-lang.com/)，[EJS](http://ejs.co/)，[Swig](https://github.com/paularmstrong/swig)，[Nunjucks](http://mozilla.github.io/nunjucks/)，[doT.js](http://olado.github.io/doT/)……
+
+测试框架包括：[Mocha](http://mochajs.org/)，[Expresso](http://visionmedia.github.io/expresso/)，[Unit.js](http://unitjs.com/)，[Karma](http://karma-runner.github.io/)……
+
+构建工具有：[Grunt](http://gruntjs.com/)，[Gulp](http://gulpjs.com/)，[Webpack](http://webpack.github.io/)……
+
+目前，在npm上已发布的开源Node.js模块数量超过了30万个。
+
+
+
+#### 一、koa
+
+koa是Express的下一代基于Node.js的web框架，目前有1.x和2.0两个版本。
+
+##### 1. Express
+
+Express是第一代最流行的web框架，它对Node.js的http进行了封装，用起来如下：
+
+```js
+var express = require('express');
+var app = express();
+
+app.get('/', function (req, res) {
+    res.send('Hello World!');
+});
+
+app.listen(3000, function () {
+    console.log('Example app listening on port 3000!');
+});
+```
+
+虽然Express的API很简单，但是它是基于ES5的语法，要实现异步代码，只有一个方法：回调。如果异步嵌套层次过多，代码写起来就非常难看：
+
+```js
+app.get('/test', function(req,res) {
+    fs.readFile('/file1', function(err,data) {
+        if(err) {
+            res.status(500).send('read filel error');
+        }
+        fs.readFile('/file2', function(err,data) {
+            res.status(500).send('read file2 error');
+        })
+        res.type('text/plain');
+        res.send(data);
+    })
+})
+```
+
+##### 2.koa 1.0
+
+和Express相比，koa 1.0使用generator实现异步，代码看起来像同步的：
+
+```js
+var koa = require('koa');
+var app = koa();
+
+app.use('/test',function *() {
+    yield doReadFile1();
+    var data = yield doReadFile2();
+    this.body = data;
+})
+
+app.listen(3000);
+```
+
+用generator实现异步比回调简单了不少，但是generator的本意并不是异步。Promise才是为异步设计的，但是Promise的写法……想想就复杂。为了简化异步代码，ES7（目前是草案，还没有发布）引入了新的关键字`async`和`await`，可以轻松地把一个function变为异步模式：
+
+```js
+async function () {
+    var data = await fs.read('/file1');
+}
+```
+
+##### 3.koa2.0
+
+基于ES7开发了koa2，和koa 1相比，koa2完全使用Promise并配合`async`来实现异步。
+
+```js
+app.use(async (ctx, next) => {
+    await next();
+    var data = await doReadFile();
+    ctx.response.type = 'text/plain';
+    ctx.response.body = data;
+});
+```
+
+##### 4.koa入门
+
+###### 创建koa2工程
+
+首先，我们创建一个目录`hello-koa`并作为工程目录用VS Code打开。然后，我们创建`app.js`，输入以下代码：
+
+```js
+// 导入koa，和koa 1.x不同，在koa2中，我们导入的是一个class，因此用大写的Koa表示:
+const Koa = require('koa');
+
+// 创建一个Koa对象表示web app本身:
+const app = new Koa();
+
+// 对于任何请求，app将调用该异步函数处理请求：
+app.use(async (ctx, next) => {
+    await next();
+    ctx.response.type = 'text/html';
+    ctx.response.body = '<h1>Hello, koa2!</h1>';
+});
+
+// 在端口3000监听:
+app.listen(3000);
+console.log('app started at port 3000...');
+```
+
+对于每一个http请求，koa将调用我们传入的异步函数来处理：
+
+```js
+async (ctx, next) => {
+    await next();
+    // 设置response的Content-Type:
+    ctx.response.type = 'text/html';
+    // 设置response的内容:
+    ctx.response.body = '<h1>Hello, koa2!</h1>';
+}
+```
+
+其中，参数`ctx`是由koa传入的封装了request和response的变量，我们可以通过它访问request和response，`next`是koa传入的将要处理的下一个异步函数。
+
+上面的异步函数中，我们首先用`await next();`处理下一个异步函数，然后，设置response的Content-Type和内容。
+
+由`async`标记的函数称为异步函数，在异步函数中，可以用`await`调用另一个异步函数，这两个关键字将在ES7中引入。
+
+koa这个包怎么装，`app.js`才能正常导入它？
+
+方法一：可以用npm命令直接安装koa。先打开命令提示符，务必把当前目录切换到`hello-koa`这个目录，然后执行命令：
+
+```
+C:\...\hello-koa> npm install koa@2.0.0
+```
+
+npm会把koa2以及koa2依赖的所有包全部安装到当前目录的node_modules目录下。
+
+方法二：在`hello-koa`这个目录下创建一个`package.json`，这个文件描述了我们的`hello-koa`工程会用到哪些包。完整的文件内容如下：
+
+```json
+{
+    "name": "hello-koa2",
+    "version": "1.0.0",
+    "description": "Hello Koa 2 example with async",
+    "main": "app.js",
+    "scripts": {
+        "start": "node app.js"
+    },
+    "keywords": [
+        "koa",
+        "async"
+    ],
+    "author": "Michael Liao",
+    "license": "Apache-2.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/lorry0508/nodejsMynotes"
+    },
+    "dependencies": {
+        "koa": "2.0.0"
+    }
+}
+```
+
+其中，`dependencies`描述了我们的工程依赖的包以及版本号。其他字段均用来描述项目信息，可任意填写。
+
+然后，我们在`hello-koa`目录下执行`npm install`就可以把所需包以及依赖包一次性全部装好：
+
+```
+C:\...\hello-koa> npm install
+```
+
+很显然，第二个方法更靠谱，因为我们只要在`package.json`正确设置了依赖，npm就会把所有用到的包都装好。
+
+*注意*，任何时候都可以直接删除整个`node_modules`目录，因为用`npm install`命令可以完整地重新下载所有依赖。并且，这个目录不应该被放入版本控制中。
+
+我们的工程结构如下：
+
+```
+hello-koa/
+|
++- .vscode/
+|  |
+|  +- launch.json <-- VSCode 配置文件
+|
++- app.js <-- 使用koa的js
+|
++- package.json <-- 项目描述文件
+|
++- node_modules/ <-- npm安装的所有依赖包
+```
+
+紧接着，我们在`package.json`中添加依赖包：
+
+```json
+"dependencies": {
+    "koa": "2.0.0"
+}
+```
+
+然后使用`npm install`命令安装后，在VS Code中执行`app.js`，调试控制台输出如下：
+
+```
+node --debug-brk=40645 --nolazy app.js 
+Debugger listening on port 40645
+app started at port 3000...
+```
+
+打开浏览器，输入`http://localhost:3000`，即可看到效果。
+
+还可以直接用命令`node app.js`在命令行启动程序，或者用`npm start`启动。`npm start`命令会让npm执行定义在`package.json`文件中的start对应命令：
+
+```json
+"scripts": {
+    "start": "node app.js"
+}
+```
+
+###### koa middleware
+
+核心代码是：
+
+```js
+app.use(async (ctx, next) => {
+    await next();
+    ctx.response.type = 'text/html';
+    ctx.response.body = '<h1>Hello, koa2!</h1>';
+});
+```
+
+##### 5.处理URL
+
+###### koa-router
+
+为了处理URL，我们需要引入`koa-router`这个middleware，让它负责处理URL映射。
+
+把`koa`工程复制一份，重命名为`url-koa`。
+
+先在`package.json`中添加依赖项：
+
+```json
+"koa-router": "7.0.0"
+```
+
+然后用`npm install`安装。
+
+接下来，我们修改`app.js`，使用`koa-router`来处理URL：
+
+```js
+const Koa = require('koa');
+
+// 注意require('koa-router')返回的是函数:
+const router = require('koa-router')();
+
+const app = new Koa();
+
+// log request URL:
+app.use(async (ctx, next) => {
+    console.log(`Process ${ctx.request.method} ${ctx.request.url}...`);
+    await next();
+});
+
+// add url-route:
+router.get('/hello/:name', async (ctx, next) => {
+    var name = ctx.params.name;
+    ctx.response.body = `<h1>Hello, ${name}!</h1>`;
+});
+
+router.get('/', async (ctx, next) => {
+    ctx.response.body = '<h1>Index</h1>';
+});
+
+// add router middleware:
+app.use(router.routes());
+
+app.listen(3000);
+console.log('app started at port 3000...');
+```
+
+注意导入`koa-router`的语句最后的`()`是函数调用：
+
+```js
+const router = require('koa-router')();
+```
+
+相当于：
+
+```js
+const fn_router = require('koa-router');
+const router = fn_router();
+```
+
+然后，我们使用`router.get('/path', async fn)`来注册一个GET请求。可以在请求路径中使用带变量的`/hello/:name`，变量可以通过`ctx.params.name`访问。
+
+再运行`app.js`，我们就可以测试不同的URL：
+
+输入首页：http://localhost:3000/
+
+输入：http://localhost:3000/hello/koa
+
+
+
+###### 处理post请求
+
+用`router.get('/path', async fn)`处理的是get请求。如果要处理post请求，可以用`router.post('/path', async fn)`。
+
+用post请求处理URL时，我们会遇到一个问题：post请求通常会发送一个表单，或者JSON，它作为request的body发送，但无论是Node.js提供的原始request对象，还是koa提供的request对象，都*不提供*解析request的body的功能！
+
+所以，我们又需要引入另一个middleware来解析原始request请求，然后，把解析后的参数，绑定到`ctx.request.body`中。
+
+`koa-bodyparser`就是用来干这个活的。
+
+我们在`package.json`中添加依赖项：
+
+```json
+"koa-bodyparser": "3.2.0"
+```
+
+然后使用`npm install`安装。
+
+下面，修改`app.js`，引入`koa-bodyparser`：
+
+```js
+const bodyParser = require('koa-bodyparser');
+```
+
+在合适的位置加上：
+
+```js
+app.use(bodyParser());
+```
+
+由于middleware的顺序很重要，这个`koa-bodyparser`必须在`router`之前被注册到`app`对象上。
+
+现在我们就可以处理post请求了。写一个简单的登录表单：
+
+```js
+router.get('/', async (ctx, next) => {
+    ctx.response.body = `<h1>Index</h1>
+        <form action="/signin" method="post">
+            <p>Name: <input name="name" value="koa"></p>
+            <p>Password: <input name="password" type="password"></p>
+            <p><input type="submit" value="Submit"></p>
+        </form>`;
+});
+
+router.post('/signin', async (ctx, next) => {
+    var
+        name = ctx.request.body.name || '',
+        password = ctx.request.body.password || '';
+    console.log(`signin with name: ${name}, password: ${password}`);
+    if (name === 'koa' && password === '12345') {
+        ctx.response.body = `<h1>Welcome, ${name}!</h1>`;
+    } else {
+        ctx.response.body = `<h1>Login failed!</h1>
+        <p><a href="/">Try again</a></p>`;
+    }
+});
+```
+
+注意到我们用`var name = ctx.request.body.name || ''`拿到表单的`name`字段，如果该字段不存在，默认值设置为`''`。
+
+类似的，put、delete、head请求也可以由router处理。
+
+###### 重构
+
+所有的URL处理函数都放到`app.js`里显得很乱，而且，每加一个URL，就需要修改`app.js`。随着URL越来越多，`app.js`就会越来越长。
+
+如果能把URL处理函数集中到某个js文件，或者某几个js文件中就好了，然后让`app.js`自动导入所有处理URL的函数。这样，代码一分离，逻辑就显得清楚了。最好是这样：
+
+```
+url2-koa/
+|
++- .vscode/
+|  |
+|  +- launch.json <-- VSCode 配置文件
+|
++- controllers/
+|  |
+|  +- login.js <-- 处理login相关URL
+|  |
+|  +- users.js <-- 处理用户管理相关URL
+|
++- app.js <-- 使用koa的js
+|
++- package.json <-- 项目描述文件
+|
++- node_modules/ <-- npm安装的所有依赖包
+```
+
+于是我们把`url-koa`复制一份，重命名为`url2-koa`，准备重构这个项目。
+
+我们先在`controllers`目录下编写`index.js`：
+
+```js
+var fn_index = async (ctx, next) => {
+    ctx.response.body = `<h1>Index</h1>
+        <form action="/signin" method="post">
+            <p>Name: <input name="name" value="koa"></p>
+            <p>Password: <input name="password" type="password"></p>
+            <p><input type="submit" value="Submit"></p>
+        </form>`;
+};
+
+var fn_signin = async (ctx, next) => {
+    var
+        name = ctx.request.body.name || '',
+        password = ctx.request.body.password || '';
+    console.log(`signin with name: ${name}, password: ${password}`);
+    if (name === 'koa' && password === '12345') {
+        ctx.response.body = `<h1>Welcome, ${name}!</h1>`;
+    } else {
+        ctx.response.body = `<h1>Login failed!</h1>
+        <p><a href="/">Try again</a></p>`;
+    }
+};
+
+module.exports = {
+    'GET /': fn_index,
+    'POST /signin': fn_signin
+};
+```
+
+现在，我们修改`app.js`，让它自动扫描`controllers`目录，找到所有`js`文件，导入，然后注册每个URL：
+
+```js
+function addMapping(router, mapping) {
+    for (var url in mapping) {
+        if (url.startsWith('GET ')) {
+            var path = url.substring(4);
+            router.get(path, mapping[url]);
+            console.log(`register URL mapping: GET ${path}`);
+        } else if (url.startsWith('POST ')) {
+            var path = url.substring(5);
+            router.post(path, mapping[url]);
+            console.log(`register URL mapping: POST ${path}`);
+        } else {
+            console.log(`invalid URL: ${url}`);
+        }
+    }
+}
+
+function addControllers(router) {
+    var files = fs.readdirSync(__dirname + '/controllers');
+    var js_files = files.filter((f) => {
+        return f.endsWith('.js');
+    });
+
+    for (var f of js_files) {
+        console.log(`process controller: ${f}...`);
+        let mapping = require(__dirname + '/controllers/' + f);
+        addMapping(router, mapping);
+    }
+}
+
+addControllers(router);
+```
+
+###### Controller Middleware
+
+最后，我们把扫描`controllers`目录和创建`router`的代码从`app.js`中提取出来，作为一个简单的middleware使用，命名为`controller.js`：
+
+```js
+const fs = require('fs');
+
+function addMapping(router, mapping) {
+    ...
+}
+
+function addControllers(router, dir) {
+    ...
+}
+
+module.exports = function (dir) {
+    let
+        controllers_dir = dir || 'controllers', // 如果不传参数，扫描目录默认为'controllers'
+        router = require('koa-router')();
+    addControllers(router, controllers_dir);
+    return router.routes();
+};
+```
+
+这样一来，我们在`app.js`的代码又简化了：
+
+```js
+...
+
+// 导入controller middleware:
+const controller = require('./controller');
+
+...
+
+// 使用middleware:
+app.use(controller());
+
+...
+```
+
+经过重新整理后的工程`url2-koa`目前具备非常好的模块化，所有处理URL的函数按功能组存放在`controllers`目录，今后我们也只需要不断往这个目录下加东西就可以了，`app.js`保持不变。
+
+##### 6.Nunjucks
+
+Nunjucks是一个模板引擎。模板引擎就是基于模板配合数据构造出字符串输出的一个组件。
