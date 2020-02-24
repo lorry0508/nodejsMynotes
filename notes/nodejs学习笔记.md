@@ -1097,4 +1097,93 @@ app.use(controller());
 
 ##### 6.Nunjucks
 
-Nunjucks是一个模板引擎。模板引擎就是基于模板配合数据构造出字符串输出的一个组件。
+Nunjucks是一个模板引擎，模板引擎就是基于模板配合数据构造出字符串输出的一个组件。
+
+类似：
+
+```js
+function examResult (data) {
+    return `${data.name}同学一年级期末考试语文${data.chinese}分，数学${data.math}分，位于年级第${data.ranking}名。`
+}
+
+examResult({
+    name: '小明',
+    chinese: 78,
+    math: 87,
+    ranking: 999
+});
+```
+
+模板引擎最常见的输出就是输出网页，也就是HTML文本。当然，也可以输出任意格式的文本，比如Text，XML，Markdown等等。
+
+输出HTML有几个特别重要的问题需要考虑：
+
+1.转义
+
+对特殊字符要转义，避免受到XSS攻击。比如，如果变量`name`的值不是`小明`，而是`小明...`，模板引擎输出的HTML到了浏览器，就会自动执行恶意JavaScript代码。
+
+2.格式化
+
+对不同类型的变量要格式化，比如，货币需要变成`12,345.00`这样的格式，日期需要变成`2016-01-01`这样的格式。
+
+3.简单逻辑
+
+模板还需要能执行一些简单逻辑，比如，要按条件输出内容，需要if实现如下输出：
+
+```js
+{{ name }}同学，
+{% if score >= 90 %}
+    成绩优秀，应该奖励
+{% elif score >=60 %}
+    成绩良好，继续努力
+{% else %}
+    不及格，建议回家打屁股
+{% endif %}
+```
+
+所以，我们需要一个功能强大的模板引擎，来完成页面输出的功能。
+
+###### 1）Nunjucks
+
+Nunjucks是Mozilla开发的一个纯JavaScript编写的模板引擎，既可以用在Node环境下，又可以运行在浏览器端。但是，主要还是运行在Node环境下，因为浏览器端有更好的模板解决方案，例如MVVM框架。
+
+从上面的例子我们可以看到，虽然模板引擎内部可能非常复杂，但是使用一个模板引擎是非常简单的，因为本质上我们只需要构造这样一个函数：
+
+```js
+function render(view, model) {
+    // TODO:...
+}
+```
+
+其中，`view`是模板的名称（又称为视图），因为可能存在多个模板，需要选择其中一个。`model`就是数据，在JavaScript中，它就是一个简单的Object。`render`函数返回一个字符串，就是模板的输出。
+
+我们创建一个`use-nunjucks`的VS Code工程结构如下：
+
+```
+use-nunjucks/
+|
++- .vscode/
+|  |
+|  +- launch.json <-- VSCode 配置文件
+|
++- views/
+|  |
+|  +- hello.html <-- HTML模板文件
+|
++- app.js <-- 入口js
+|
++- package.json <-- 项目描述文件
+|
++- node_modules/ <-- npm安装的所有依赖包
+```
+
+其中，模板文件存放在`views`目录中。我们先在`package.json`中添加`nunjucks`的依赖：
+
+```json
+"nunjucks": "2.4.2"
+```
+
+注意，模板引擎是可以独立使用的，并不需要依赖koa。用`npm install`安装所有依赖包。
+
+紧接着，我们要编写使用Nunjucks的函数`render`。怎么写？方法是查看Nunjucks的[官方文档](http://mozilla.github.io/nunjucks/)，仔细阅读后，在`app.js`中编写代码如下：
+
