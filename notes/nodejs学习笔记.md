@@ -1187,3 +1187,75 @@ use-nunjucks/
 
 紧接着，我们要编写使用Nunjucks的函数`render`。怎么写？方法是查看Nunjucks的[官方文档](http://mozilla.github.io/nunjucks/)，仔细阅读后，在`app.js`中编写代码如下：
 
+```js
+const nunjucks = require('nunjucks');
+
+function createEnv(path, opts) {
+    var
+        autoescape = opts.autoescape === undefined ? true : opts.autoescape,
+        noCache = opts.noCache || false,
+        watch = opts.watch || false,
+        throwOnUndefined = opts.throwOnUndefined || false,
+        env = new nunjucks.Environment(
+            new nunjucks.FileSystemLoader('views', {
+                noCache: noCache,
+                watch: watch,
+            }), {
+                autoescape: autoescape,
+                throwOnUndefined: throwOnUndefined
+            });
+    if (opts.filters) {
+        for (var f in opts.filters) {
+            env.addFilter(f, opts.filters[f]);
+        }
+    }
+    return env;
+}
+
+var env = createEnv('views', {
+    watch: true,
+    filters: {
+        hex: function (n) {
+            return '0x' + n.toString(16);
+        }
+    }
+});
+```
+
+变量`env`就表示Nunjucks模板引擎对象，它有一个`render(view, model)`方法，正好传入`view`和`model`两个参数，并返回字符串。创建`env`需要的参数可以查看文档获知。我们用`autoescape = opts.autoescape && true`这样的代码给每个参数加上默认值，最后使用`new nunjucks.FileSystemLoader('views')`创建一个文件系统加载器，从`views`目录读取模板。
+
+编写一个`hello.html`模板文件，放到`views`目录下，内容如下：
+
+```html
+<h1>Hello {{ name }}</h1>
+```
+
+然后，我们就可以用下面的代码来渲染这个模板：
+
+```js
+var s = env.render('hello.html', { name: '小明' });
+console.log(s);
+```
+
+获得输出如下：
+
+```html
+<h1>Hello 小明</h1>
+```
+
+Nunjucks模板引擎最强大的功能在于模板的继承。仔细观察各种网站可以发现，网站的结构实际上是类似的，头部、尾部都是固定格式，只有中间页面部分内容不同。如果每个模板都重复头尾，一旦要修改头部或尾部，那就需要改动所有模板。
+
+性能
+
+对于模板渲染本身来说，速度是非常非常快的，因为就是拼字符串嘛，纯CPU操作。
+
+性能问题主要出现在从文件读取模板内容这一步。这是一个IO操作，在Node.js环境中，我们知道，单线程的JavaScript最不能忍受的就是同步IO，但Nunjucks默认就使用同步IO读取模板文件。
+
+好消息是Nunjucks会缓存已读取的文件内容，也就是说，模板文件最多读取一次，就会放在内存中，后面的请求是不会再次读取文件的，只要我们指定了`noCache: false`这个参数。
+
+在开发环境下，可以关闭cache，这样每次重新加载模板，便于实时修改模板。在生产环境下，一定要打开cache，这样就不会有性能问题。
+
+Nunjucks也提供了异步读取的方式，但是这样写起来很麻烦，有简单的写法我们就不会考虑复杂的写法。保持代码简单是可维护性的关键。
+
+##### 7.MVC
+
